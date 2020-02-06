@@ -1,105 +1,105 @@
-/*
-    This is an example pipeline that implement full CI/CD for a simple static web site packed in a Docker image.
-
-    The pipeline is made up of 6 main steps
-    1. Git clone and setup
-    2. Build and local tests
-    3. Publish Docker and Helm
-    4. Deploy to dev and test
-    5. Deploy to staging and test
-    6. Optionally deploy to production and test
- */
-
-/*
-    Create the kubernetes namespace
- */
-def createNamespace (namespace) {
-    echo "Creating namespace ${namespace} if needed"
-
-    sh "[ ! -z \"\$(kubectl get ns ${namespace} -o name 2>/dev/null)\" ] || kubectl create ns ${namespace}"
-}
-
-/*
-    Helm install
- */
-def helmInstall (namespace, release) {
-    echo "Installing ${release} in ${namespace}"
-
-    script {
-        release = "${release}-${namespace}"
-        sh "helm repo add helm ${HELM_REPO}; helm repo update"
-        sh """
-            helm upgrade --install --namespace ${namespace} ${release} \
-                --set imagePullSecrets=${IMG_PULL_SECRET} \
-                --set image.repository=${DOCKER_REG}/${IMAGE_NAME},image.tag=${DOCKER_TAG} helm/acme
-        """
-        sh "sleep 5"
-    }
-}
-
-/*
-    Helm delete (if exists)
- */
-def helmDelete (namespace, release) {
-    echo "Deleting ${release} in ${namespace} if deployed"
-
-    script {
-        release = "${release}-${namespace}"
-        sh "[ -z \"\$(helm ls --short ${release} 2>/dev/null)\" ] || helm delete --purge ${release}"
-    }
-}
-
-/*
-    Run a curl against a given url
- */
-def curlRun (url, out) {
-    echo "Running curl on ${url}"
-
-    script {
-        if (out.equals('')) {
-            out = 'http_code'
-        }
-        echo "Getting ${out}"
-            def result = sh (
-                returnStdout: true,
-                script: "curl --output /dev/null --silent --connect-timeout 5 --max-time 5 --retry 5 --retry-delay 5 --retry-max-time 30 --write-out \"%{${out}}\" ${url}"
-        )
-        echo "Result (${out}): ${result}"
-    }
-}
-
-/*
-    Test with a simple curl and check we get 200 back
- */
-def curlTest (namespace, out) {
-    echo "Running tests in ${namespace}"
-
-    script {
-        if (out.equals('')) {
-            out = 'http_code'
-        }
-
-        // Get deployment's service IP
-        def svc_ip = sh (
-                returnStdout: true,
-                script: "kubectl get svc -n ${namespace} | grep ${ID} | awk '{print \$3}'"
-        )
-
-        if (svc_ip.equals('')) {
-            echo "ERROR: Getting service IP failed"
-            sh 'exit 1'
-        }
-
-        echo "svc_ip is ${svc_ip}"
-        url = 'http://' + svc_ip
-
-        curlRun (url, out)
-    }
-}
-
-/*
-    This is the main pipeline section with the stages of the CI/CD
- */
+#/*
+#    This is an example pipeline that implement full CI/CD for a simple static web site packed in a Docker image.
+#
+#    The pipeline is made up of 6 main steps
+#    1. Git clone and setup
+#    2. Build and local tests
+#    3. Publish Docker and Helm
+#    4. Deploy to dev and test
+#    5. Deploy to staging and test
+#    6. Optionally deploy to production and test
+# */
+#
+#/*
+#    Create the kubernetes namespace
+# */
+#def createNamespace (namespace) {
+#    echo "Creating namespace ${namespace} if needed"
+#
+#    sh "[ ! -z \"\$(kubectl get ns ${namespace} -o name 2>/dev/null)\" ] || kubectl create ns ${namespace}"
+#}
+#
+#/*
+#    Helm install
+# */
+#def helmInstall (namespace, release) {
+#    echo "Installing ${release} in ${namespace}"
+#
+#    script {
+#        release = "${release}-${namespace}"
+#        sh "helm repo add helm ${HELM_REPO}; helm repo update"
+#        sh """
+#            helm upgrade --install --namespace ${namespace} ${release} \
+#                --set imagePullSecrets=${IMG_PULL_SECRET} \
+#                --set image.repository=${DOCKER_REG}/${IMAGE_NAME},image.tag=${DOCKER_TAG} helm/acme
+#        """
+#        sh "sleep 5"
+#    }
+#}
+#
+#/*
+#    Helm delete (if exists)
+# */
+#def helmDelete (namespace, release) {
+#    echo "Deleting ${release} in ${namespace} if deployed"
+#
+#    script {
+#        release = "${release}-${namespace}"
+#        sh "[ -z \"\$(helm ls --short ${release} 2>/dev/null)\" ] || helm delete --purge ${release}"
+#    }
+#}
+#
+#/*
+#    Run a curl against a given url
+# */
+#def curlRun (url, out) {
+#    echo "Running curl on ${url}"
+#
+#    script {
+#        if (out.equals('')) {
+#            out = 'http_code'
+#        }
+#        echo "Getting ${out}"
+#            def result = sh (
+#                returnStdout: true,
+#                script: "curl --output /dev/null --silent --connect-timeout 5 --max-time 5 --retry 5 --retry-delay 5 --retry-max-time 30 --write-out \"%{${out}}\" ${url}"
+#        )
+#        echo "Result (${out}): ${result}"
+#    }
+#}
+#
+#/*
+#    Test with a simple curl and check we get 200 back
+# */
+#def curlTest (namespace, out) {
+#    echo "Running tests in ${namespace}"
+#
+#    script {
+#        if (out.equals('')) {
+#            out = 'http_code'
+#        }
+#
+#        // Get deployment's service IP
+#        def svc_ip = sh (
+#                returnStdout: true,
+#                script: "kubectl get svc -n ${namespace} | grep ${ID} | awk '{print \$3}'"
+#        )
+#
+#        if (svc_ip.equals('')) {
+#            echo "ERROR: Getting service IP failed"
+#            sh 'exit 1'
+#        }
+#
+#        echo "svc_ip is ${svc_ip}"
+#        url = 'http://' + svc_ip
+#
+#        curlRun (url, out)
+#    }
+#}
+#
+#/*
+#    This is the main pipeline section with the stages of the CI/CD
+# */
 pipeline {
 
     options {
@@ -109,7 +109,7 @@ pipeline {
 
     // Some global default variables
     environment {
-        IMAGE_NAME = 'acme'
+        IMAGE_NAME = 'konsear/jenkins'
         TEST_LOCAL_PORT = 8817
         DEPLOY_PROD = false
         PARAMETERS_FILE = "${JENKINS_HOME}/parameters.groovy"
@@ -146,8 +146,8 @@ pipeline {
             steps {
                 echo "Check out acme code"
                 git branch: "master",
-                        credentialsId: 'eldada-bb',
-                        url: 'https://github.com/eldada/jenkins-pipeline-kubernetes.git'
+                        credentialsId: 'venbollineni-7366'
+                        url: 'https://github.com/bollineni36/jenkins-pipeline-kubernetes.git'
 
                 // Validate kubectl
                 sh "kubectl cluster-info"
@@ -166,7 +166,7 @@ pipeline {
                 load "${JENKINS_HOME}/parameters.groovy"
 
                 echo "DOCKER_REG is ${DOCKER_REG}"
-                echo "HELM_REPO  is ${HELM_REPO}"
+#                echo "HELM_REPO  is ${HELM_REPO}"
 
                 // Define a unique name for the tests container and helm release
                 script {
@@ -198,26 +198,26 @@ pipeline {
             }
         }
 
-        // Run the 3 tests on the currently running ACME Docker container
-        stage('Local tests') {
-            parallel {
-                stage('Curl http_code') {
-                    steps {
-                        curlRun ("http://${host_ip}", 'http_code')
-                    }
-                }
-                stage('Curl total_time') {
-                    steps {
-                        curlRun ("http://${host_ip}", 'total_time')
-                    }
-                }
-                stage('Curl size_download') {
-                    steps {
-                        curlRun ("http://${host_ip}", 'size_download')
-                    }
-                }
-            }
-        }
+#        // Run the 3 tests on the currently running ACME Docker container
+#        stage('Local tests') {
+#            parallel {
+#                stage('Curl http_code') {
+#                    steps {
+#                        curlRun ("http://${host_ip}", 'http_code')
+#                    }
+#                }
+#                stage('Curl total_time') {
+#                    steps {
+#                        curlRun ("http://${host_ip}", 'total_time')
+#                    }
+#                }
+#                stage('Curl size_download') {
+#                    steps {
+#                        curlRun ("http://${host_ip}", 'size_download')
+#                    }
+#                }
+#            }
+#        }
 
         ////////// Step 3 //////////
         stage('Publish Docker and Helm') {
@@ -228,8 +228,8 @@ pipeline {
                 echo "Pushing ${DOCKER_REG}/${IMAGE_NAME}:${DOCKER_TAG} image to registry"
                 sh "${WORKSPACE}/build.sh --push --registry ${DOCKER_REG} --tag ${DOCKER_TAG} --docker_usr ${DOCKER_USR} --docker_psw ${DOCKER_PSW}"
 
-                echo "Packing helm chart"
-                sh "${WORKSPACE}/build.sh --pack_helm --push_helm --helm_repo ${HELM_REPO} --helm_usr ${HELM_USR} --helm_psw ${HELM_PSW}"
+#                echo "Packing helm chart"
+#                sh "${WORKSPACE}/build.sh --pack_helm --push_helm --helm_repo ${HELM_REPO} --helm_usr ${HELM_USR} --helm_psw ${HELM_PSW}"
             }
         }
 
@@ -237,168 +237,162 @@ pipeline {
         stage('Deploy to dev') {
             steps {
                 script {
-                    namespace = 'development'
-
-                    echo "Deploying application ${ID} to ${namespace} namespace"
-                    createNamespace (namespace)
-
-                    // Remove release if exists
-                    helmDelete (namespace, "${ID}")
 
                     // Deploy with helm
                     echo "Deploying"
-                    helmInstall(namespace, "${ID}")
+                    helmInstall("${ID}")
                 }
             }
         }
 
-        // Run the 3 tests on the deployed Kubernetes pod and service
-        stage('Dev tests') {
-            parallel {
-                stage('Curl http_code') {
-                    steps {
-                        curlTest (namespace, 'http_code')
-                    }
-                }
-                stage('Curl total_time') {
-                    steps {
-                        curlTest (namespace, 'time_total')
-                    }
-                }
-                stage('Curl size_download') {
-                    steps {
-                        curlTest (namespace, 'size_download')
-                    }
-                }
-            }
-        }
-
-        stage('Cleanup dev') {
-            steps {
-                script {
-                    // Remove release if exists
-                    helmDelete (namespace, "${ID}")
-                }
-            }
-        }
-
-        ////////// Step 5 //////////
-        stage('Deploy to staging') {
-            steps {
-                script {
-                    namespace = 'staging'
-
-                    echo "Deploying application ${IMAGE_NAME}:${DOCKER_TAG} to ${namespace} namespace"
-                    createNamespace (namespace)
-
-                    // Remove release if exists
-                    helmDelete (namespace, "${ID}")
-
-                    // Deploy with helm
-                    echo "Deploying"
-                    helmInstall (namespace, "${ID}")
-                }
-            }
-        }
-
-        // Run the 3 tests on the deployed Kubernetes pod and service
-        stage('Staging tests') {
-            parallel {
-                stage('Curl http_code') {
-                    steps {
-                        curlTest (namespace, 'http_code')
-                    }
-                }
-                stage('Curl total_time') {
-                    steps {
-                        curlTest (namespace, 'time_total')
-                    }
-                }
-                stage('Curl size_download') {
-                    steps {
-                        curlTest (namespace, 'size_download')
-                    }
-                }
-            }
-        }
-
-        stage('Cleanup staging') {
-            steps {
-                script {
-                    // Remove release if exists
-                    helmDelete (namespace, "${ID}")
-                }
-            }
-        }
-
-        ////////// Step 6 //////////
-        // Waif for user manual approval, or proceed automatically if DEPLOY_TO_PROD is true
-        stage('Go for Production?') {
-            when {
-                allOf {
-                    environment name: 'GIT_BRANCH', value: 'master'
-                    environment name: 'DEPLOY_TO_PROD', value: 'false'
-                }
-            }
-
-            steps {
-                // Prevent any older builds from deploying to production
-                milestone(1)
-                input 'Proceed and deploy to Production?'
-                milestone(2)
-
-                script {
-                    DEPLOY_PROD = true
-                }
-            }
-        }
-
-        stage('Deploy to Production') {
-            when {
-                anyOf {
-                    expression { DEPLOY_PROD == true }
-                    environment name: 'DEPLOY_TO_PROD', value: 'true'
-                }
-            }
-
-            steps {
-                script {
-                    DEPLOY_PROD = true
-                    namespace = 'production'
-
-                    echo "Deploying application ${IMAGE_NAME}:${DOCKER_TAG} to ${namespace} namespace"
-                    createNamespace (namespace)
-
-                    // Deploy with helm
-                    echo "Deploying"
-                    helmInstall (namespace, "${ID}")
-                }
-            }
-        }
-
-        // Run the 3 tests on the deployed Kubernetes pod and service
-        stage('Production tests') {
-            when {
-                expression { DEPLOY_PROD == true }
-            }
-
-            parallel {
-                stage('Curl http_code') {
-                    steps {
-                        curlTest (namespace, 'http_code')
-                    }
-                }
-                stage('Curl total_time') {
-                    steps {
-                        curlTest (namespace, 'time_total')
-                    }
-                }
-                stage('Curl size_download') {
-                    steps {
-                        curlTest (namespace, 'size_download')
-                    }
-                }
-            }
-        }
-    }
-}
+#        // Run the 3 tests on the deployed Kubernetes pod and service
+#        stage('Dev tests') {
+#            parallel {
+#                stage('Curl http_code') {
+#                    steps {
+#                        curlTest (namespace, 'http_code')
+#                    }
+#                }
+#                stage('Curl total_time') {
+#                    steps {
+#                        curlTest (namespace, 'time_total')
+#                    }
+#                }
+#                stage('Curl size_download') {
+#                    steps {
+#                        curlTest (namespace, 'size_download')
+#                    }
+#                }
+#            }
+#        }
+#
+#        stage('Cleanup dev') {
+#            steps {
+#                script {
+#                    // Remove release if exists
+#                    helmDelete (namespace, "${ID}")
+#                }
+#            }
+#        }
+#
+#        ////////// Step 5 //////////
+#        stage('Deploy to staging') {
+#            steps {
+#                script {
+#                    namespace = 'staging'
+#
+#                    echo "Deploying application ${IMAGE_NAME}:${DOCKER_TAG} to ${namespace} namespace"
+#                    createNamespace (namespace)
+#
+#                    // Remove release if exists
+#                    helmDelete (namespace, "${ID}")
+#
+#                    // Deploy with helm
+#                    echo "Deploying"
+#                    helmInstall (namespace, "${ID}")
+#                }
+#            }
+#        }
+#
+#        // Run the 3 tests on the deployed Kubernetes pod and service
+#        stage('Staging tests') {
+#            parallel {
+#                stage('Curl http_code') {
+#                    steps {
+#                        curlTest (namespace, 'http_code')
+#                    }
+#                }
+#                stage('Curl total_time') {
+#                    steps {
+#                        curlTest (namespace, 'time_total')
+#                    }
+#                }
+#                stage('Curl size_download') {
+#                    steps {
+#                        curlTest (namespace, 'size_download')
+#                    }
+#                }
+#            }
+#        }
+#
+#        stage('Cleanup staging') {
+#            steps {
+#                script {
+#                    // Remove release if exists
+#                    helmDelete (namespace, "${ID}")
+#                }
+#            }
+#        }
+#
+#        ////////// Step 6 //////////
+#        // Waif for user manual approval, or proceed automatically if DEPLOY_TO_PROD is true
+#        stage('Go for Production?') {
+#            when {
+#                allOf {
+#                    environment name: 'GIT_BRANCH', value: 'master'
+#                    environment name: 'DEPLOY_TO_PROD', value: 'false'
+#                }
+#            }
+#
+#            steps {
+#                // Prevent any older builds from deploying to production
+#                milestone(1)
+#                input 'Proceed and deploy to Production?'
+#                milestone(2)
+#
+#                script {
+#                    DEPLOY_PROD = true
+#                }
+#            }
+#        }
+#
+#        stage('Deploy to Production') {
+#            when {
+#                anyOf {
+#                    expression { DEPLOY_PROD == true }
+#                    environment name: 'DEPLOY_TO_PROD', value: 'true'
+#                }
+#            }
+#
+#            steps {
+#                script {
+#                    DEPLOY_PROD = true
+#                    namespace = 'production'
+#
+#                    echo "Deploying application ${IMAGE_NAME}:${DOCKER_TAG} to ${namespace} namespace"
+#                    createNamespace (namespace)
+#
+#                    // Deploy with helm
+#                    echo "Deploying"
+#                    helmInstall (namespace, "${ID}")
+#                }
+#            }
+#        }
+#
+#        // Run the 3 tests on the deployed Kubernetes pod and service
+#        stage('Production tests') {
+#            when {
+#                expression { DEPLOY_PROD == true }
+#            }
+#
+#            parallel {
+#                stage('Curl http_code') {
+#                    steps {
+#                        curlTest (namespace, 'http_code')
+#                    }
+#                }
+#                stage('Curl total_time') {
+#                    steps {
+#                        curlTest (namespace, 'time_total')
+#                    }
+#                }
+#                stage('Curl size_download') {
+#                    steps {
+#                        curlTest (namespace, 'size_download')
+#                    }
+#                }
+#            }
+#        }
+#    }
+#}
+#

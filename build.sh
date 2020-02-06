@@ -4,16 +4,16 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SCRIPT_NAME=$(basename $0)
 BUILD_DIR=${SCRIPT_DIR}/build
 
-DOCKER_REG=${DOCKER_REG:-docker-artifactory.my}
-DOCKER_USR=${DOCKER_USR:-admin}
-DOCKER_PSW=${DOCKER_PSW:-password}
+DOCKER_REG=${DOCKER_REG:-acrncpltest.azurecr.io}
+DOCKER_USR=${DOCKER_USR:-acrncpltest}
+DOCKER_PSW=${DOCKER_PSW:-bs9sHuvL05+1KgrHLaMhhHSW36S1aH5o}
 
-DOCKER_REPO=${DOCKER_REPO:-acme}
-DOCKER_TAG=${DOCKER_TAG:-dev}
+DOCKER_REPO=${DOCKER_REPO:-konsear/jenkins}
+DOCKER_TAG=${DOCKER_TAG:-v1}
 
-HELM_REPO=${HELM_REG:-http://artifactory.my/artifactory/helm}
-HELM_USR=${HELM_USR:-admin}
-HELM_PSW=${HELM_PSW:-password}
+#HELM_REPO=${HELM_REG:-http://artifactory.my/artifactory/helm}
+#HELM_USR=${HELM_USR:-admin}
+#HELM_PSW=${HELM_PSW:-password}
 
 errorExit () {
     echo -e "\nERROR: $1"; echo
@@ -95,21 +95,21 @@ packHelmChart() {
     [ -d ${BUILD_DIR}/helm ] && rm -rf ${BUILD_DIR}/helm
     mkdir -p ${BUILD_DIR}/helm
 
-    helm package -d ${BUILD_DIR}/helm ${SCRIPT_DIR}/helm/acme || errorExit "Packing helm chart ${SCRIPT_DIR}/helm/acme failed"
+    helm package -d ${BUILD_DIR}/helm ${SCRIPT_DIR}/helm/konsear || errorExit "Packing helm chart ${SCRIPT_DIR}/helm/acme failed"
 }
 
 # Pushing the Helm chart
 # Note - this uses the Artifactory API. You can replace it with any other solution you use.
-pushHelmChart() {
-    echo -e "\nPushing Helm chart"
-
-    local chart_name=$(ls -1 ${BUILD_DIR}/helm/*.tgz 2> /dev/null)
-    echo "Helm chart: ${chart_name}"
-
-    [ ! -z "${chart_name}" ] || errorExit "Did not find the helm chart to deploy"
-    curl -u${HELM_USR}:${HELM_PSW} -T ${chart_name} "${HELM_REPO}/$(basename ${chart_name})" || errorExit "Uploading helm chart failed"
-    echo
-}
+#pushHelmChart() {
+#    echo -e "\nPushing Helm chart"
+#
+#    local chart_name=$(ls -1 ${BUILD_DIR}/helm/*.tgz 2> /dev/null)
+#    echo "Helm chart: ${chart_name}"
+#
+#    [ ! -z "${chart_name}" ] || errorExit "Did not find the helm chart to deploy"
+#    curl -u${HELM_USR}:${HELM_PSW} -T ${chart_name} "${HELM_REPO}/$(basename ${chart_name})" || errorExit "Uploading helm chart failed"
+#    echo
+#}
 
 # Process command line options. See usage above for supported options
 processOptions () {
@@ -128,9 +128,9 @@ processOptions () {
             --pack_helm)
                 PACK_HELM="true"; shift
             ;;
-            --push_helm)
-                PUSH_HELM="true"; shift
-            ;;
+#            --push_helm)
+#                PUSH_HELM="true"; shift
+#            ;;
             --registry)
                 DOCKER_REG=${2}; shift 2
             ;;
@@ -143,15 +143,15 @@ processOptions () {
             --tag)
                 DOCKER_TAG=${2}; shift 2
             ;;
-            --helm_repo)
-                HELM_REPO=${2}; shift 2
-            ;;
-            --helm_usr)
-                HELM_USR=${2}; shift 2
-            ;;
-            --helm_psw)
-                HELM_PSW=${2}; shift 2
-            ;;
+#            --helm_repo)
+#                HELM_REPO=${2}; shift 2
+#            ;;
+#            --helm_usr)
+#                HELM_USR=${2}; shift 2
+#            ;;
+#            --helm_psw)
+#                HELM_PSW=${2}; shift 2
+#            ;;
             -h | --help)
                 usage
             ;;
@@ -169,8 +169,8 @@ main () {
     echo "DOCKER_USR:   ${DOCKER_USR}"
     echo "DOCKER_REPO:  ${DOCKER_REPO}"
     echo "DOCKER_TAG:   ${DOCKER_TAG}"
-    echo "HELM_REPO:    ${HELM_REPO}"
-    echo "HELM_USR:     ${HELM_USR}"
+#    echo "HELM_REPO:    ${HELM_REPO}"
+#    echo "HELM_USR:     ${HELM_USR}"
 
     # Cleanup
     rm -rf ${BUILD_DIR}
@@ -189,9 +189,9 @@ main () {
     if [ "${PACK_HELM}" == "true" ]; then
         packHelmChart
     fi
-    if [ "${PUSH_HELM}" == "true" ]; then
-        pushHelmChart
-    fi
+#    if [ "${PUSH_HELM}" == "true" ]; then
+#        pushHelmChart
+#    fi
 }
 
 ############## Main
