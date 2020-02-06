@@ -102,10 +102,10 @@
 # */
 pipeline {
 
-    options {
-        // Build auto timeout
-        timeout(time: 60, unit: 'MINUTES')
-    }
+#    options {
+#       // Build auto timeout
+#       timeout(time: 60, unit: 'MINUTES')
+#    }
 
     // Some global default variables
     environment {
